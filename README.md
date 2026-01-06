@@ -22,7 +22,7 @@
 
 ## Overview
 
-SnackCache **reduces your LLM API costs** by caching responses locally. Repeated prompts return instantly—no API call, no charge.
+SnackCache **reduces your LLM API costs** by caching responses locally. Repeated prompts return instantly - no API call, no charge.
 
 It also **saves ~11% on tokens** by normalizing prompts before sending them upstream (collapsing whitespace, standardizing formatting).
 
@@ -35,24 +35,24 @@ Works with existing SDKs. No code changes beyond the base URL.
 
 ### Who this is for
 
-- **Developers iterating locally** — Run the same prompt 50 times while debugging. Pay once.
-- **Apps with repeated queries** — Customer support bots, FAQ systems, internal tools.
-- **CI/CD pipelines** — Same test prompts every build. Cache them.
-- **Teams sharing a proxy** — Everyone benefits from the same cache.
+- **Developers iterating locally** - Run the same prompt 50 times while debugging. Pay once.
+- **Apps with repeated queries** - Customer support bots, FAQ systems, internal tools.
+- **CI/CD pipelines** - Same test prompts every build. Cache them.
+- **Teams sharing a proxy** - Everyone benefits from the same cache.
 
 ---
 
 ## How It Works
 
 ```
-Your App → SnackCache → OpenAI/Anthropic
-               │
+Your App -> SnackCache -> OpenAI/Anthropic
+               |
          [Normalize prompt]
-               │
+               |
          [Check cache]
-               │
-         ┌─────┴─────┐
-         │           │
+               |
+         +-----+-----+
+         |           |
        HIT         MISS
     (instant,     (forward to API,
      free)        cache response)
@@ -63,13 +63,13 @@ Your App → SnackCache → OpenAI/Anthropic
 SnackCache normalizes prompts before caching, which means **different formatting still hits the same cache**:
 
 ```
-"What is 2+2?"       → cache key: 8c21c2ea...
-"What is 2+2? "      → cache key: 8c21c2ea...  ✓ same (trailing space)
-"What is  2+2?"      → cache key: 8c21c2ea...  ✓ same (double space)
-"What is 2+2?\n"     → cache key: 8c21c2ea...  ✓ same (newline)
+"What is 2+2?"       -> cache key: 8c21c2ea...
+"What is 2+2? "      -> cache key: 8c21c2ea...  same (trailing space)
+"What is  2+2?"      -> cache key: 8c21c2ea...  same (double space)
+"What is 2+2?\n"     -> cache key: 8c21c2ea...  same (newline)
 ```
 
-This also reduces token counts on every request—fewer tokens sent upstream, lower costs even on cache misses.
+This also reduces token counts on every request - fewer tokens sent upstream, lower costs even on cache misses.
 
 ---
 
@@ -187,9 +187,9 @@ snackcache serve --redis redis://localhost:6379
 
 ## Limitations
 
-- **Streaming responses** forwarded but not cached
-- **High temperature** outputs won't cache well (non-deterministic)
-- **Unique long conversations** won't benefit from caching
+- **Streaming responses** - forwarded but not cached
+- **High temperature** - outputs won't cache well (non-deterministic)
+- **Unique long conversations** - won't benefit from caching
 
 For best results, use `temperature=0` and structure prompts consistently.
 
@@ -203,6 +203,12 @@ For best results, use `temperature=0` and structure prompts consistently.
 
 ---
 
+## Contributing
+
+PRs welcome! Feel free to open issues for bugs, feature requests, or questions.
+
+---
+
 ## License
 
 MIT
@@ -210,3 +216,4 @@ MIT
 ---
 
 Built by [Snack AI](https://snackai.dev)
+Feedback? [Reach out: hello@snackai.dev](mailto: hello@snackai.dev)
