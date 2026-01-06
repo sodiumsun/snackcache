@@ -216,4 +216,5 @@ MIT
 ---
 
 Built by [Snack AI](https://snackai.dev)
-Feedback? [Reach out: hello@snackai.dev](mailto: hello@snackai.dev)
+
+Feedback? hello@snackai.dev
