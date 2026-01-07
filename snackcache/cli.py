@@ -31,6 +31,11 @@ def cmd_serve(args):
     else:
         print("Using in-memory cache")
     
+    # Set env vars for startup message
+    display_host = "localhost" if args.host == "0.0.0.0" else args.host
+    os.environ["SNACKCACHE_HOST"] = display_host
+    os.environ["SNACKCACHE_PORT"] = str(args.port)
+    
     print()
     
     uvicorn.run(
