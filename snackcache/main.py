@@ -2,6 +2,7 @@
 SnackCache - Caching proxy for LLM APIs.
 """
 
+import os
 from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager
 
@@ -16,15 +17,18 @@ from .proxy import get_proxy
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    host = os.environ.get("SNACKCACHE_HOST", "localhost")
+    port = os.environ.get("SNACKCACHE_PORT", "8000")
+    
     print("\n" + "=" * 50)
     print("🍿 SnackCache is running!")
     print("=" * 50)
     print(f"\nOpenAI-compatible endpoint:")
-    print(f"  POST http://localhost:8000/v1/chat/completions")
+    print(f"  POST http://{host}:{port}/v1/chat/completions")
     print(f"\nAnthropic-compatible endpoint:")
-    print(f"  POST http://localhost:8000/v1/messages")
+    print(f"  POST http://{host}:{port}/v1/messages")
     print(f"\nStats:")
-    print(f"  GET  http://localhost:8000/stats")
+    print(f"  GET  http://{host}:{port}/stats")
     print(f"\n" + "=" * 50 + "\n")
     yield
     proxy = get_proxy()
