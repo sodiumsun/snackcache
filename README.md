@@ -26,6 +26,11 @@ SnackCache is a caching layer for OpenAI and Anthropic APIs. It **reduces your L
 client = OpenAI(base_url="http://localhost:8000/v1")
 ```
 
+**The insight:** Most developers use similar patterns—common system prompts, standard instructions, popular use cases.
+When you get a cache hit, it might be from:
+- Your own previous request
+- Another developer with the same normalized prompt
+- A pre-seeded common pattern
 ---
 
 ## Results
