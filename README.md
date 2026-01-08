@@ -33,7 +33,7 @@ When you get a cache hit, it might be from:
 - Another developer with the same normalized prompt
 - A pre-seeded common pattern
 
-With SnackCache, you don't need to pay twice for those tokens.
+With SnackCache, you don't need to pay for those tokens twice.
 
 ---
 
@@ -115,17 +115,39 @@ snackcache serve
 
 ### Point your SDK at SnackCache
 
+**OpenAI:**
+
 ```python
 from openai import OpenAI
 
-# One line change
 client = OpenAI(base_url="http://localhost:8000/v1")
 
-# Use normally
 response = client.chat.completions.create(
     model="gpt-4o",
     messages=[{"role": "user", "content": "What is 2+2?"}],
     temperature=0,
+)
+
+# Later, a similar query hits the cache:
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "What's two plus two?"}],
+    temperature=0,
+)
+# -> Returns cached response (semantic match)
+```
+
+**Anthropic:**
+
+```python
+import anthropic
+
+client = anthropic.Anthropic(base_url="http://localhost:8000/v1")
+
+response = client.messages.create(
+    model="claude-sonnet-4-20250514",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Explain quantum computing"}],
 )
 ```
 
