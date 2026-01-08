@@ -25,6 +25,7 @@ SnackCache is a caching layer for OpenAI and Anthropic APIs. It **reduces your L
 # One line change. That's it.
 client = OpenAI(base_url="http://localhost:8000/v1")
 ```
+Works with existing SDKs. No code changes beyond the base URL.
 
 **The insight:** Most developers use similar patterns - common system prompts, standard instructions, popular use cases.
 When you get a cache hit, it might be from:
@@ -155,9 +156,11 @@ Cost Saved:         $1.24
 ```bash
 snackcache serve [OPTIONS]
 
-  --threshold, -t  Similarity threshold 0-1 (default: 0.85)
-  --no-semantic    Exact match only (faster, smaller)
+  --host, -H       Host to bind (default: 0.0.0.0)
   --port, -p       Port (default: 8000)
+  --threshold, -t  Similarity threshold 0-1 (default: 0.85)
+  --no-semantic    Disable semantic caching (exact match only)
+  --verbose, -v    Verbose logging
 ```
 
 ### Tuning the threshold
@@ -175,7 +178,7 @@ snackcache serve [OPTIONS]
 - **Developers iterating locally** - Same prompt 50 times while debugging. Pay once.
 - **CI/CD pipelines** - Test suites with LLM calls. Cache across runs.
 - **Apps with similar queries** - Support bots, FAQ systems, internal tools.
-- **Teams sharing a proxy** - Run one server, everyone benefits.
+- **Teams sharing a proxy** - Run one server, everyone benefits (community version coming).
 
 ---
 
@@ -192,15 +195,10 @@ snackcache serve [OPTIONS]
 - [ ] Persistent vector index (survives restarts)
 - [ ] Cache warm-up from disk
 
-### v0.4.0 - Team sharing
+### v0.4.0 - Team/community sharing
 - [ ] Shared cache server mode
 - [ ] Multi-user support
 - [ ] Cache namespacing
-
-### v0.5.0 - Production ready
-- [ ] Hosted endpoint (cache.snackai.dev)
-- [ ] Dashboard with analytics
-- [ ] Usage-based billing for hosted version
 
 ### Future
 - [ ] Streaming response caching
@@ -209,13 +207,14 @@ snackcache serve [OPTIONS]
 
 ---
 
-## Limitations
+## How semantic matching works
 
-- **Streaming** - Forwarded but not cached (yet)
-- **High temperature** - Non-deterministic outputs cache poorly
-- **Very long prompts** - Embedding quality degrades
+1. When a new prompt comes in, we generate an embedding using `all-MiniLM-L6-v2`
+2. We search the FAISS index for similar embeddings
+3. If similarity >= threshold, we return the cached response
+4. Otherwise, we forward to the API and cache the new response + embedding
 
-For best results: `temperature=0`, consistent prompt structure.
+The embedding model runs locally - no additional API calls.
 
 ---
 
