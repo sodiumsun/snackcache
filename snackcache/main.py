@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from .cache import get_cache
-from .normalizer import normalize_request, generate_cache_key, get_normalizer_stats
+from .normalizer import normalize_request, get_normalizer_stats
 from .proxy import get_proxy
 
 
@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="SnackCache",
     description="Caching proxy for LLM APIs",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -57,19 +57,24 @@ def format_cost(usd: float) -> str:
     return f"${usd:.2f}"
 
 
-def log_request(cache_hit: bool, cache_key: str, model: str, stats: Dict[str, Any]):
-    status = "✅ CACHE HIT" if cache_hit else "🔄 CACHE MISS"
+def log_request(cache_hit: bool, model: str, stats: Dict[str, Any], semantic: bool = False):
+    if cache_hit:
+        status = "🎯 SEMANTIC HIT" if semantic else "✅ EXACT HIT"
+    else:
+        status = "🔄 CACHE MISS"
     hit_rate = stats.get("hit_rate", 0) * 100
     saved = format_cost(stats.get("total_cost_saved_usd", 0))
-    print(f"{status} | {model} | key={cache_key[:8]}... | hit_rate={hit_rate:.1f}% | saved={saved}")
+    print(f"{status} | {model} | hit_rate={hit_rate:.1f}% | saved={saved}")
 
 
 @app.get("/")
 async def root():
+    cache = get_cache()
     return {
         "service": "snackcache",
         "status": "running",
-        "version": "0.1.0",
+        "version": "0.2.0",
+        "semantic_caching": cache.semantic_enabled,
         "endpoints": {
             "openai": "/v1/chat/completions",
             "anthropic": "/v1/messages",
@@ -90,6 +95,8 @@ async def get_stats():
         "summary": {
             "total_requests": cache_stats["total_requests"],
             "cache_hit_rate": f"{cache_stats['hit_rate'] * 100:.1f}%",
+            "exact_hits": cache_stats["exact_hits"],
+            "semantic_hits": cache_stats["semantic_hits"],
             "tokens_saved": cache_stats["total_tokens_saved"],
             "cost_saved": format_cost(cache_stats["total_cost_saved_usd"]),
         }
@@ -122,7 +129,6 @@ async def openai_chat_completions(
     
     is_streaming = body.get("stream", False)
     normalized_body = normalize_request(body)
-    cache_key = generate_cache_key(body)
     model = body.get("model", "unknown")
     
     if is_streaming:
@@ -134,11 +140,15 @@ async def openai_chat_completions(
         except Exception as e:
             raise HTTPException(status_code=502, detail=f"Upstream error: {e}")
     
-    cached_response = cache.get(cache_key, model)
+    # Check cache (exact + semantic)
+    stats_before = cache.get_stats()
+    cached_response = cache.get(normalized_body, model)
     
     if cached_response is not None:
-        log_request(True, cache_key, model, cache.get_stats())
-        cached_response["_snackcache"] = {"cache_hit": True, "cache_key": cache_key}
+        stats_after = cache.get_stats()
+        is_semantic = stats_after["semantic_hits"] > stats_before.get("semantic_hits", 0)
+        log_request(True, model, stats_after, semantic=is_semantic)
+        cached_response["_snackcache"] = {"cache_hit": True, "semantic": is_semantic}
         return JSONResponse(content=cached_response)
     
     try:
@@ -146,9 +156,9 @@ async def openai_chat_completions(
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Upstream error: {e}")
     
-    cache.set(cache_key, response)
-    log_request(False, cache_key, model, cache.get_stats())
-    response["_snackcache"] = {"cache_hit": False, "cache_key": cache_key}
+    cache.set(normalized_body, response)
+    log_request(False, model, cache.get_stats())
+    response["_snackcache"] = {"cache_hit": False}
     
     return JSONResponse(content=response)
 
@@ -168,7 +178,6 @@ async def anthropic_messages(
     
     is_streaming = body.get("stream", False)
     normalized_body = normalize_request(body)
-    cache_key = generate_cache_key(body)
     model = body.get("model", "unknown")
     
     if is_streaming:
@@ -180,10 +189,14 @@ async def anthropic_messages(
         except Exception as e:
             raise HTTPException(status_code=502, detail=f"Upstream error: {e}")
     
-    cached_response = cache.get(cache_key, model)
+    # Check cache (exact + semantic)
+    stats_before = cache.get_stats()
+    cached_response = cache.get(normalized_body, model)
     
     if cached_response is not None:
-        log_request(True, cache_key, model, cache.get_stats())
+        stats_after = cache.get_stats()
+        is_semantic = stats_after["semantic_hits"] > stats_before.get("semantic_hits", 0)
+        log_request(True, model, stats_after, semantic=is_semantic)
         return JSONResponse(content=cached_response)
     
     try:
@@ -191,8 +204,8 @@ async def anthropic_messages(
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Upstream error: {e}")
     
-    cache.set(cache_key, response)
-    log_request(False, cache_key, model, cache.get_stats())
+    cache.set(normalized_body, response)
+    log_request(False, model, cache.get_stats())
     
     return JSONResponse(content=response)
 

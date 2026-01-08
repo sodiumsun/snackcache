@@ -23,13 +23,34 @@ def cmd_serve(args):
         print("Error: uvicorn required. Install with: pip install uvicorn")
         sys.exit(1)
     
+    # Initialize cache with settings before starting server
+    from snackcache.cache import init_cache
+    
     print_banner()
+    
+    # Cache settings
+    semantic = not args.no_semantic
+    if semantic:
+        try:
+            import sentence_transformers
+            import faiss
+            print(f"Semantic caching: enabled (threshold: {args.threshold})")
+        except ImportError:
+            print("⚠️  Semantic caching disabled (install: pip install sentence-transformers faiss-cpu)")
+            semantic = False
+    else:
+        print("Semantic caching: disabled")
+    
+    init_cache(
+        semantic=semantic,
+        similarity_threshold=args.threshold,
+    )
     
     if args.redis:
         os.environ["SNACKCACHE_REDIS_URL"] = args.redis
-        print(f"Using Redis: {args.redis}")
+        print(f"Redis: {args.redis}")
     else:
-        print("Using in-memory cache")
+        print("Storage: in-memory")
     
     # Set env vars for startup message
     display_host = "localhost" if args.host == "0.0.0.0" else args.host
@@ -62,13 +83,20 @@ def cmd_stats(args):
         sys.exit(1)
     
     summary = stats.get("summary", {})
+    cache = stats.get("cache", {})
     
     print("\n📊 SnackCache Statistics")
     print("=" * 40)
     print(f"Total Requests:     {summary.get('total_requests', 0)}")
     print(f"Cache Hit Rate:     {summary.get('cache_hit_rate', '0%')}")
+    print(f"  Exact Hits:       {summary.get('exact_hits', 0)}")
+    print(f"  Semantic Hits:    {summary.get('semantic_hits', 0)}")
     print(f"Tokens Saved:       {summary.get('tokens_saved', 0):,}")
     print(f"Cost Saved:         {summary.get('cost_saved', '$0')}")
+    print("-" * 40)
+    print(f"Semantic Enabled:   {cache.get('semantic_enabled', False)}")
+    print(f"Cache Size:         {cache.get('cache_size', 0)}")
+    print(f"Index Size:         {cache.get('semantic_index_size', 0)}")
     print("=" * 40 + "\n")
 
 
@@ -89,13 +117,14 @@ def cmd_clear(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="SnackCache - Caching proxy for LLM APIs",
+        description="SnackCache - Semantic caching proxy for LLM APIs",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   snackcache serve
   snackcache serve --port 3000
-  snackcache serve --redis redis://localhost:6379
+  snackcache serve --threshold 0.9
+  snackcache serve --no-semantic
   snackcache stats
 
 Usage with OpenAI SDK:
@@ -110,6 +139,10 @@ Usage with OpenAI SDK:
     serve_parser.add_argument("--host", "-H", default="0.0.0.0")
     serve_parser.add_argument("--port", "-p", type=int, default=8000)
     serve_parser.add_argument("--redis", "-r", help="Redis URL")
+    serve_parser.add_argument("--threshold", "-t", type=float, default=0.85,
+                              help="Semantic similarity threshold (0-1, default: 0.85)")
+    serve_parser.add_argument("--no-semantic", action="store_true",
+                              help="Disable semantic caching (exact match only)")
     serve_parser.add_argument("--reload", action="store_true")
     serve_parser.add_argument("--verbose", "-v", action="store_true")
     serve_parser.set_defaults(func=cmd_serve)

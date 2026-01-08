@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "snackcache"
-version = "0.1.0"
-description = "Drop-in caching proxy for LLM APIs"
+version = "0.2.0"
+description = "Semantic caching proxy for LLM APIs"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "Snack AI", email = "hello@snackai.dev"}]
-keywords = ["llm", "openai", "anthropic", "cache", "proxy", "ai", "inference"]
+keywords = ["llm", "openai", "anthropic", "cache", "proxy", "ai", "inference", "semantic"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -25,6 +25,9 @@ dependencies = [
     "fastapi>=0.100.0",
     "uvicorn>=0.23.0",
     "httpx>=0.24.0",
+    "numpy>=1.21.0",
+    "sentence-transformers>=2.2.0",
+    "faiss-cpu>=1.7.0",
 ]
 
 [project.optional-dependencies]
@@ -35,8 +38,8 @@ dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "black>=23.0.0", "ruff>=0.0.28
 snackcache = "snackcache.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/snackai/snackcache"
-Repository = "https://github.com/snackai/snackcache"
+Homepage = "https://github.com/sodiumsun/snackcache"
+Repository = "https://github.com/sodiumsun/snackcache"
 
 [tool.setuptools.packages.find]
 include = ["snackcache*"]
