@@ -19,6 +19,15 @@
 
 ---
 
+SnackCache is a caching layer for OpenAI and Anthropic APIs. It **reduces your LLM API costs** by caching responses and returning them for similar queries.
+
+```python
+# One line change. That's it.
+client = OpenAI(base_url="http://localhost:8000/v1")
+```
+
+---
+
 ## Results
 
 In our testing with real development workflows:
